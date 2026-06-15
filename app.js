@@ -116,6 +116,7 @@ const cardModal = document.querySelector("#card-modal");
 const profileModal = document.querySelector("#profile-modal");
 const cardForm = document.querySelector("#card-form");
 const imageInput = document.querySelector("#card-image");
+const imageUpload = document.querySelector("#image-upload");
 const imagePreview = document.querySelector("#image-preview");
 const formError = document.querySelector("#form-error");
 const saveCardButton = document.querySelector("#save-card-button");
@@ -712,12 +713,74 @@ document.querySelector("[data-close-profile]").addEventListener("click", () => p
 
 imageInput.addEventListener("change", () => {
   const file = imageInput.files[0];
-  if (!file) {
-    imagePreview.hidden = true;
-    return;
+  if (file) useImageFile(file, false);
+});
+
+const allowedImageTypes = ["image/png", "image/jpeg", "image/webp"];
+let imageDragDepth = 0;
+
+function showImagePreview(file) {
+  if (imagePreview.dataset.objectUrl) {
+    URL.revokeObjectURL(imagePreview.dataset.objectUrl);
   }
-  imagePreview.src = URL.createObjectURL(file);
+  const objectUrl = URL.createObjectURL(file);
+  imagePreview.dataset.objectUrl = objectUrl;
+  imagePreview.src = objectUrl;
   imagePreview.hidden = false;
+}
+
+function useImageFile(file, updateInput = true) {
+  if (!allowedImageTypes.includes(file.type)) {
+    formError.textContent = "Оберіть картинку у форматі PNG, JPG або WebP";
+    if (!updateInput) imageInput.value = "";
+    return false;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    formError.textContent = "Картинка має бути меншою за 5 МБ";
+    if (!updateInput) imageInput.value = "";
+    return false;
+  }
+
+  if (updateInput) {
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    imageInput.files = transfer.files;
+  }
+
+  formError.textContent = "";
+  showImagePreview(file);
+  return true;
+}
+
+["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+  imageUpload.addEventListener(eventName, (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  });
+});
+
+imageUpload.addEventListener("dragenter", () => {
+  imageDragDepth += 1;
+  imageUpload.classList.add("is-dragging");
+});
+
+imageUpload.addEventListener("dragover", (event) => {
+  event.dataTransfer.dropEffect = "copy";
+});
+
+imageUpload.addEventListener("dragleave", () => {
+  imageDragDepth -= 1;
+  if (imageDragDepth <= 0) {
+    imageDragDepth = 0;
+    imageUpload.classList.remove("is-dragging");
+  }
+});
+
+imageUpload.addEventListener("drop", (event) => {
+  imageDragDepth = 0;
+  imageUpload.classList.remove("is-dragging");
+  const file = event.dataTransfer.files[0];
+  if (file) useImageFile(file);
 });
 
 [cardModal, profileModal].forEach((modal) => {
