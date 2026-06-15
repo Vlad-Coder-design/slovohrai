@@ -218,13 +218,35 @@ function renderCards() {
               <div class="translations">
                 <div class="translation">
                   <span class="language">🇬🇧 Англійська</span>
-                  <strong>${escapeHtml(card.english)}</strong>
+                  <div class="translation-word">
+                    <strong>${escapeHtml(card.english)}</strong>
+                    <button class="speak-button" data-action="speak" data-language="english"
+                      aria-label="Прослухати англійську вимову слова «${escapeHtml(card.ukrainian)}»"
+                      title="Прослухати вимову">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 9v6h4l5 4V5L8 9H4Z"></path>
+                        <path d="M16 8.5a5 5 0 0 1 0 7"></path>
+                        <path d="M18.5 6a8.5 8.5 0 0 1 0 12"></path>
+                      </svg>
+                    </button>
+                  </div>
                   <p class="pronunciation">${escapeHtml(card.english_pronunciation)}</p>
                 </div>
                 <div class="divider"></div>
                 <div class="translation">
                   <span class="language">🇪🇸 Іспанська</span>
-                  <strong>${escapeHtml(card.spanish)}</strong>
+                  <div class="translation-word">
+                    <strong>${escapeHtml(card.spanish)}</strong>
+                    <button class="speak-button" data-action="speak" data-language="spanish"
+                      aria-label="Прослухати іспанську вимову слова «${escapeHtml(card.ukrainian)}»"
+                      title="Прослухати вимову">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 9v6h4l5 4V5L8 9H4Z"></path>
+                        <path d="M16 8.5a5 5 0 0 1 0 7"></path>
+                        <path d="M18.5 6a8.5 8.5 0 0 1 0 12"></path>
+                      </svg>
+                    </button>
+                  </div>
                   <p class="pronunciation">${escapeHtml(card.spanish_pronunciation)}</p>
                 </div>
                 <div class="back-actions">
@@ -636,6 +658,40 @@ async function deleteCard(card) {
   showToast(`Картку «${card.ukrainian}» видалено`);
 }
 
+function speakCard(card, language, button) {
+  if (!("speechSynthesis" in window)) {
+    showToast("Цей браузер не підтримує озвучення");
+    return;
+  }
+
+  const isEnglish = language === "english";
+  const text = isEnglish ? card.english : card.spanish;
+  const languageCode = isEnglish ? "en-US" : "es-ES";
+  const utterance = new SpeechSynthesisUtterance(text);
+  const voices = speechSynthesis.getVoices();
+  const matchingVoice = voices.find((voice) =>
+    voice.lang.toLowerCase().startsWith(languageCode.slice(0, 2).toLowerCase()),
+  );
+
+  utterance.lang = languageCode;
+  utterance.rate = 0.82;
+  utterance.pitch = 1;
+  if (matchingVoice) utterance.voice = matchingVoice;
+
+  document.querySelectorAll(".speak-button.speaking").forEach((item) => {
+    item.classList.remove("speaking");
+  });
+  button.classList.add("speaking");
+  utterance.addEventListener("end", () => button.classList.remove("speaking"));
+  utterance.addEventListener("error", () => {
+    button.classList.remove("speaking");
+    showToast("Не вдалося відтворити вимову");
+  });
+
+  speechSynthesis.cancel();
+  speechSynthesis.speak(utterance);
+}
+
 filters.addEventListener("click", (event) => {
   const button = event.target.closest("[data-category]");
   if (!button) return;
@@ -666,6 +722,8 @@ grid.addEventListener("click", async (event) => {
     await toggleCardValue(card, "is_favorite");
   } else if (actionButton.dataset.action === "learned") {
     await toggleCardValue(card, "is_learned");
+  } else if (actionButton.dataset.action === "speak") {
+    speakCard(card, actionButton.dataset.language, actionButton);
   } else if (actionButton.dataset.action === "edit") {
     openEditModal(card);
   } else if (actionButton.dataset.action === "delete") {
