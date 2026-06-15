@@ -427,10 +427,15 @@ searchInput.addEventListener("input", (event) => {
 
 grid.addEventListener("click", async (event) => {
   const actionButton = event.target.closest("[data-action]");
-  if (!actionButton) return;
-  const cardElement = actionButton.closest(".flashcard");
+  const cardElement = event.target.closest(".flashcard");
+  if (!cardElement) return;
   const card = state.cards.find((item) => item.id === cardElement.dataset.id);
   if (!card) return;
+
+  if (!actionButton) {
+    cardElement.classList.toggle("flipped");
+    return;
+  }
 
   if (actionButton.dataset.action === "flip") {
     cardElement.classList.toggle("flipped");
