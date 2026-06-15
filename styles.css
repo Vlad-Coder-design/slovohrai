@@ -913,10 +913,6 @@ h2 {
     transform-origin: left center;
   }
 
-  .avatar {
-    display: none;
-  }
-
   .auth-button {
     width: 39px;
     padding: 0;
@@ -938,6 +934,12 @@ h2 {
   .icon-button {
     width: 39px;
     height: 39px;
+  }
+
+  .avatar {
+    width: 39px;
+    height: 39px;
+    flex: 0 0 auto;
   }
 
   main {
