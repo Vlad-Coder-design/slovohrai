@@ -914,6 +914,30 @@ h2 {
   text-align: center;
   cursor: pointer;
   place-content: center;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.image-upload.is-dragging {
+  border-color: var(--teal);
+  background: color-mix(in srgb, var(--teal) 14%, var(--surface));
+  outline: 3px solid color-mix(in srgb, var(--teal) 22%, transparent);
+  transform: scale(1.01);
+}
+
+.image-upload.is-dragging::after {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  display: grid;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--teal) 88%, transparent);
+  color: #fff;
+  font-weight: 800;
+  content: "Відпустіть, щоб додати картинку";
+  place-items: center;
 }
 
 .image-upload input {
