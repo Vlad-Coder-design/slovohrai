@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f7f4ed" />
+    <meta
+      name="description"
+      content="Мовні картки для вивчення англійської та іспанської разом."
+    />
+    <title>Словограй — мовні картки</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#" aria-label="Словограй, на головну">
+        <span class="brand-mark" aria-hidden="true">
+          <span>С</span>
+          <span>¡</span>
+        </span>
+        <span>Словограй</span>
+      </a>
+
+      <nav class="desktop-nav" aria-label="Головна навігація">
+        <button class="nav-item active" data-view="all">Картки</button>
+        <button class="nav-item" data-view="favorites">Улюблені</button>
+        <button class="nav-item" data-view="learned">Вивчені</button>
+      </nav>
+
+      <div class="header-actions">
+        <button class="add-button" id="add-card-button">
+          <span aria-hidden="true">+</span>
+          <span class="add-button-label">Додати</span>
+        </button>
+        <button class="icon-button theme-toggle" aria-label="Змінити тему">
+          <span class="sun-icon" aria-hidden="true">☀</span>
+          <span class="moon-icon" aria-hidden="true">☾</span>
+        </button>
+        <button class="auth-button" id="auth-button">
+          <span class="google-mark" aria-hidden="true">G</span>
+          <span>Увійти</span>
+        </button>
+        <button class="avatar" id="profile-button" title="Ваш профіль" hidden>М</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="welcome">
+        <div class="welcome-copy">
+          <p class="eyebrow">НАВЧАЄМОСЯ РАЗОМ</p>
+          <h1>Привіт! Яке слово<br />вивчимо сьогодні?</h1>
+          <p class="welcome-text">
+            Перевертай картки, слухай вимову та збирай свою колекцію слів.
+          </p>
+        </div>
+
+        <div class="progress-card">
+          <div class="progress-ring" aria-label="Вивчено 0 відсотків">
+            <span id="progress-percent">0%</span>
+          </div>
+          <div>
+            <span class="progress-label">Твій прогрес</span>
+            <strong><span id="learned-count">0</span> із <span id="total-count">0</span> слів</strong>
+            <small>Гарний початок!</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="library" aria-labelledby="library-title">
+        <div class="library-heading">
+          <div>
+            <p class="section-kicker">ТВОЯ КОЛЕКЦІЯ</p>
+            <h2 id="library-title">Мої картки</h2>
+          </div>
+          <span class="card-count" id="visible-count">0 карток</span>
+        </div>
+
+        <div class="toolbar">
+          <label class="search">
+            <span aria-hidden="true">⌕</span>
+            <input
+              id="search-input"
+              type="search"
+              placeholder="Знайти слово..."
+              autocomplete="off"
+            />
+          </label>
+          <div class="filters" id="filters" aria-label="Фільтр за категорією"></div>
+        </div>
+
+        <div class="cards-grid" id="cards-grid"></div>
+
+        <div class="empty-state" id="empty-state" hidden>
+          <span aria-hidden="true">✦</span>
+          <h3>Тут поки порожньо</h3>
+          <p>Спробуй інший пошук або категорію.</p>
+        </div>
+      </section>
+    </main>
+
+    <nav class="mobile-nav" aria-label="Мобільна навігація">
+      <button class="mobile-nav-item active" data-view="all">
+        <span aria-hidden="true">▦</span>Картки
+      </button>
+      <button class="mobile-nav-item" data-view="favorites">
+        <span aria-hidden="true">♡</span>Улюблені
+      </button>
+      <button class="mobile-nav-item" data-view="learned">
+        <span aria-hidden="true">✓</span>Вивчені
+      </button>
+    </nav>
+
+    <dialog class="modal" id="card-modal">
+      <form class="modal-card" id="card-form">
+        <div class="modal-heading">
+          <div>
+            <p class="section-kicker">НОВА КАРТКА</p>
+            <h2>Додати слово</h2>
+          </div>
+          <button class="modal-close" type="button" data-close-modal aria-label="Закрити">×</button>
+        </div>
+
+        <label class="image-upload" id="image-upload">
+          <input id="card-image" name="image" type="file" accept="image/png,image/jpeg,image/webp" />
+          <span class="upload-icon" aria-hidden="true">↥</span>
+          <strong>Додати картинку</strong>
+          <small>PNG, JPG або WebP до 5 МБ</small>
+          <img id="image-preview" alt="Попередній перегляд" hidden />
+        </label>
+
+        <div class="form-grid">
+          <label class="field full-field">
+            <span>Назва українською</span>
+            <input name="ukrainian" required placeholder="Наприклад: Книга" />
+          </label>
+          <label class="field">
+            <span>Англійською</span>
+            <input name="english" required placeholder="Book" />
+          </label>
+          <label class="field">
+            <span>Вимова англійською</span>
+            <input name="english_pronunciation" required placeholder="[бук]" />
+          </label>
+          <label class="field">
+            <span>Іспанською</span>
+            <input name="spanish" required placeholder="Libro" />
+          </label>
+          <label class="field">
+            <span>Вимова іспанською</span>
+            <input name="spanish_pronunciation" required placeholder="[лібро]" />
+          </label>
+          <label class="field full-field">
+            <span>Категорія</span>
+            <input name="category" required placeholder="Речі, їжа, фрази..." />
+          </label>
+        </div>
+
+        <p class="form-error" id="form-error" role="alert"></p>
+        <div class="modal-actions">
+          <button class="secondary-button" type="button" data-close-modal>Скасувати</button>
+          <button class="primary-button" id="save-card-button" type="submit">Створити картку</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="modal profile-modal" id="profile-modal">
+      <div class="modal-card profile-card">
+        <button class="modal-close" type="button" data-close-profile aria-label="Закрити">×</button>
+        <img class="profile-photo" id="profile-photo" alt="" />
+        <strong id="profile-name">Користувач</strong>
+        <span id="profile-email"></span>
+        <button class="secondary-button" id="sign-out-button">Вийти з акаунта</button>
+      </div>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>
