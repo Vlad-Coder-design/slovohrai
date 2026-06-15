@@ -464,6 +464,29 @@ h2 {
     var(--surface-raised);
 }
 
+.delete-card-button {
+  position: absolute;
+  z-index: 4;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 22px;
+  cursor: pointer;
+  place-items: center;
+}
+
+.delete-card-button:hover {
+  border-color: var(--coral);
+  background: var(--coral);
+  color: white;
+}
+
 .card-image {
   position: relative;
   display: grid;
