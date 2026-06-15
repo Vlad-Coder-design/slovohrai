@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="styles.css?v=3" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=3" defer></script>
+    <script src="app.js?v=4" defer></script>
   </head>
   <body>
     <header class="site-header">
@@ -95,6 +95,9 @@
             />
           </label>
           <div class="filters" id="filters" aria-label="Фільтр за категорією"></div>
+          <button class="quiz-launch-button" id="quiz-launch-button" hidden>
+            <span aria-hidden="true">✦</span> Пройти Quiz
+          </button>
         </div>
 
         <div class="cards-grid" id="cards-grid"></div>
@@ -103,6 +106,40 @@
           <span aria-hidden="true">✦</span>
           <h3>Тут поки порожньо</h3>
           <p>Спробуй інший пошук або категорію.</p>
+        </div>
+      </section>
+
+      <section class="quiz-page" id="quiz-page" hidden aria-labelledby="quiz-title">
+        <div class="quiz-topbar">
+          <button class="quiz-back-button" id="quiz-back-button">← До вивчених</button>
+          <span id="quiz-progress">1 / 1</span>
+        </div>
+
+        <div class="quiz-shell" id="quiz-shell">
+          <div class="quiz-heading">
+            <p class="section-kicker">ПЕРЕВІРКА ЗНАНЬ</p>
+            <h2 id="quiz-title">Як буде це слово?</h2>
+            <p id="quiz-instruction">Напиши переклад англійською.</p>
+          </div>
+
+          <div class="quiz-card">
+            <span class="quiz-category" id="quiz-category">Категорія</span>
+            <strong id="quiz-word">Слово</strong>
+            <div class="quiz-language-switch" aria-label="Мова відповіді">
+              <button class="active" data-quiz-language="english">🇬🇧 Англійська</button>
+              <button data-quiz-language="spanish">🇪🇸 Іспанська</button>
+            </div>
+          </div>
+
+          <form class="quiz-form" id="quiz-form">
+            <label class="field">
+              <span id="quiz-answer-label">Твоя відповідь англійською</span>
+              <input id="quiz-answer" autocomplete="off" required placeholder="Введи переклад..." />
+            </label>
+            <button class="primary-button" type="submit">Перевірити</button>
+          </form>
+
+          <div class="quiz-feedback" id="quiz-feedback" hidden role="status"></div>
         </div>
       </section>
     </main>
