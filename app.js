@@ -274,7 +274,7 @@ async function loadCards() {
   render();
 }
 
-async function signIn() {
+async function signIn(options = {}) {
   if (!isConfigured) {
     showToast("Спочатку додайте ключі Supabase");
     return;
@@ -286,9 +286,31 @@ async function signIn() {
 
   const { error } = await db.auth.signInWithOAuth({
     provider: "google",
-    options: { redirectTo: `${location.origin}${location.pathname}` },
+    options: {
+      redirectTo: `${location.origin}${location.pathname}`,
+      queryParams: {
+        prompt: "select_account",
+        ...(options.loginHint ? { login_hint: options.loginHint } : {}),
+      },
+    },
   });
   if (error) showToast(error.message);
+}
+
+async function switchAccount() {
+  if (!db) return;
+  profileModal.close();
+  const { error } = await db.auth.signOut();
+  if (error) {
+    showToast(error.message);
+    return;
+  }
+  await signIn();
+}
+
+async function addAccount() {
+  profileModal.close();
+  await signIn();
 }
 
 async function signOut() {
@@ -433,6 +455,8 @@ document.querySelector("#add-card-button").addEventListener("click", openCardMod
 authButton.addEventListener("click", signIn);
 profileButton.addEventListener("click", () => profileModal.showModal());
 document.querySelector("#sign-out-button").addEventListener("click", signOut);
+document.querySelector("#switch-account-button").addEventListener("click", switchAccount);
+document.querySelector("#add-account-button").addEventListener("click", addAccount);
 cardForm.addEventListener("submit", createCard);
 
 document.querySelectorAll("[data-close-modal]").forEach((button) => {
