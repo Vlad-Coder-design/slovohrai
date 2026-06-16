@@ -886,7 +886,7 @@ async function saveCard(event) {
   let uploadedPath = null;
 
   try {
-    const newImageFile = editingCard ? imageInput.files[0] : null;
+    const newImageFile = imageInput.files[0] || null;
     const autoFields = editingCard
       ? null
       : await buildAutomaticCardFields(
@@ -901,10 +901,12 @@ async function saveCard(event) {
             image_url: editingCard.image_url || null,
             image_path: editingCard.image_path || null,
           }
-      : {
-          image_url: autoFields.image_url,
-          image_path: autoFields.image_path,
-        };
+      : newImageFile
+        ? await uploadImage(newImageFile, cardId)
+        : {
+            image_url: autoFields.image_url,
+            image_path: autoFields.image_path,
+          };
     uploadedPath = image.image_path;
     const card = {
       id: cardId,
