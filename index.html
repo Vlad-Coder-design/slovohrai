@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="styles.css?v=10" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=13" defer></script>
+    <script src="app.js?v=14" defer></script>
   </head>
   <body>
     <header class="site-header">
@@ -95,7 +95,7 @@
             />
           </label>
           <div class="filters" id="filters" aria-label="Фільтр за категорією"></div>
-          <button class="quiz-launch-button" id="quiz-launch-button" hidden>
+          <button class="quiz-launch-button" id="quiz-launch-button">
             <span aria-hidden="true">✦</span> Пройти Quiz
           </button>
         </div>
@@ -109,13 +109,44 @@
         </div>
       </section>
 
-      <section class="quiz-page" id="quiz-page" hidden aria-labelledby="quiz-title">
+      <section class="quiz-page" id="quiz-page" hidden aria-labelledby="quiz-menu-title">
         <div class="quiz-topbar">
           <button class="quiz-back-button" id="quiz-back-button">← До вивчених</button>
           <span id="quiz-progress">1 / 1</span>
         </div>
 
-        <div class="quiz-shell" id="quiz-shell">
+        <div class="quiz-options" id="quiz-options">
+          <div class="quiz-heading">
+            <p class="section-kicker">QUIZ</p>
+            <h2 id="quiz-menu-title">РћР±РµСЂРё СЂРµР¶РёРј РїСЂР°РєС‚РёРєРё</h2>
+            <p>РџРѕС‚С–Рј РјРё РґРѕРґР°РјРѕ СЃСЋРґРё С‚РІС–Р№ С‚РµРєСЃС‚ С– РЅРѕРІС– СЂРµР¶РёРјРё.</p>
+          </div>
+
+          <div class="quiz-pricing-grid">
+            <article class="quiz-plan-card featured">
+              <p class="quiz-plan-kicker">Р РµР¶РёРј 1</p>
+              <h3>РџСЂРѕР№С‚Рё Quiz</h3>
+              <p>РџРµСЂРµРІС–СЂРёС‚Рё РІРёРІС‡РµРЅС– СЃР»РѕРІР° Сѓ РІРёРїР°РґРєРѕРІРѕРјСѓ РїРѕСЂСЏРґРєСѓ.</p>
+              <button class="primary-button" type="button" data-quiz-option="learned">РџРѕС‡Р°С‚Рё</button>
+            </article>
+
+            <article class="quiz-plan-card">
+              <p class="quiz-plan-kicker">Р РµР¶РёРј 2</p>
+              <h3>РЎРєРѕСЂРѕ</h3>
+              <p>РўСѓС‚ Р±СѓРґРµ С‚РµРєСЃС‚, СЏРєРёР№ С‚Рё РґРѕРґР°СЃРё С‚СЂРѕС…Рё РїС–Р·РЅС–С€Рµ.</p>
+              <button class="secondary-button" type="button" data-quiz-option="soon">Р”РѕРґР°РјРѕ РїС–Р·РЅС–С€Рµ</button>
+            </article>
+
+            <article class="quiz-plan-card">
+              <p class="quiz-plan-kicker">Р РµР¶РёРј 3</p>
+              <h3>РЎРєРѕСЂРѕ</h3>
+              <p>Р¦Рµ РјС–СЃС†Рµ РґР»СЏ С‰Рµ РѕРґРЅРѕРіРѕ РІР°СЂС–Р°РЅС‚Р° С‚СЂРµРЅСѓРІР°РЅРЅСЏ.</p>
+              <button class="secondary-button" type="button" data-quiz-option="soon">Р”РѕРґР°РјРѕ РїС–Р·РЅС–С€Рµ</button>
+            </article>
+          </div>
+        </div>
+
+        <div class="quiz-shell" id="quiz-shell" hidden>
           <div class="quiz-heading">
             <p class="section-kicker">ПЕРЕВІРКА ЗНАНЬ</p>
             <h2 id="quiz-title">Як буде це слово?</h2>
