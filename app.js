@@ -138,6 +138,11 @@ const translationFallbacks = {
   "доброго ранку": { english: "Good morning", spanish: "Buenos días" },
   "вода": { english: "Water", spanish: "Agua" },
   "їжа": { english: "Food", spanish: "Comida" },
+  "кавун": { english: "Watermelon", spanish: "Sandía" },
+  "груша": { english: "Pear", spanish: "Pera" },
+  "ананас": { english: "Pineapple", spanish: "Piña" },
+  "холодильник": { english: "Refrigerator", spanish: "Refrigerador" },
+  "овочі": { english: "Vegetables", spanish: "Verduras" },
   "чайник": { english: "Kettle", spanish: "Pava" },
   "паспорт": { english: "Passport", spanish: "Pasaporte" },
   "квиток": { english: "Ticket", spanish: "Boleto" },
@@ -230,25 +235,197 @@ async function translateWord(word, targetLanguage) {
   return translatedText;
 }
 
+function chooseVisualKind(card) {
+  const lookup = normalizeLookup(`${card.ukrainian} ${card.english} ${card.spanish} ${card.category}`);
+  const checks = [
+    ["watermelon", /кавун|watermelon|sand[ií]a/],
+    ["pear", /груша|pear|pera/],
+    ["pineapple", /ананас|pineapple|pi[ñn]a/],
+    ["refrigerator", /холодильник|fridge|refrigerator|refrigerador/],
+    ["kettle", /чайник|kettle|pava|tetera/],
+    ["vegetables", /овоч|vegetable|verdura|їжа|food|comida/],
+    ["money", /скільки|кошту|грош|money|cash|price|cost|cu[aá]nto|dinero/],
+    ["toilet", /туалет|toilet|ba[ñn]o|bathroom/],
+    ["document", /паспорт|документ|квиток|білет|passport|document|ticket|boleto/],
+    ["transport", /автобус|таксі|bus|taxi|autob[uú]s/],
+    ["building", /готель|аеропорт|hotel|airport|aeropuerto|будівл|заклад/],
+    ["phrase", /де|хто|що|чому|коли|фраз|where|who|what|why|when|d[oó]nde|qui[eé]n|qu[eé]/],
+  ];
+  return checks.find(([, pattern]) => pattern.test(lookup))?.[0] || "generic";
+}
+
+function generatedObjectSvg(kind) {
+  const objects = {
+    watermelon: `
+      <g filter="url(#softShadow)">
+        <circle cx="410" cy="330" r="132" fill="url(#watermelonSkin)"/>
+        <path d="M492 345c122 22 214 96 204 164-10 70-118 103-240 80s-214-96-204-165c10-69 118-102 240-79Z" fill="#79a844"/>
+        <path d="M499 364c100 18 176 75 169 128-8 53-96 76-196 58s-176-75-169-128c7-53 96-76 196-58Z" fill="#ff695b"/>
+        <path d="M279 424c11 61 97 111 193 128 86 16 166 1 193-35" fill="none" stroke="#f8f5d2" stroke-width="18" stroke-linecap="round"/>
+        <ellipse cx="468" cy="446" rx="9" ry="17" fill="#313233" transform="rotate(-18 468 446)"/>
+        <ellipse cx="535" cy="466" rx="9" ry="17" fill="#313233" transform="rotate(-18 535 466)"/>
+        <ellipse cx="593" cy="431" rx="9" ry="17" fill="#313233" transform="rotate(-18 593 431)"/>
+      </g>`,
+    pear: `
+      <g filter="url(#softShadow)">
+        <path d="M394 250c-12-79 109-87 105 1 68 27 103 104 74 179-33 86-188 93-231 8-38-76-15-156 52-188Z" fill="url(#pearFill)"/>
+        <path d="M487 234c21-50 40-72 69-88" stroke="#8d5a2a" stroke-width="24" stroke-linecap="round"/>
+        <path d="M467 191c-71-15-116 17-139 69 74 18 119-8 139-69Z" fill="#70b641"/>
+        <path d="M545 322c70 15 118 72 107 128-12 58-84 88-155 73s-119-72-107-129 84-87 155-72Z" fill="#fff4d5"/>
+        <ellipse cx="524" cy="424" rx="12" ry="22" fill="#9b6b30"/>
+        <ellipse cx="564" cy="432" rx="12" ry="22" fill="#9b6b30"/>
+      </g>`,
+    pineapple: `
+      <g filter="url(#softShadow)">
+        <path d="M414 225c-47-57-33-123 4-169 22 51 19 92-4 169Z" fill="#4d9732"/>
+        <path d="M459 230c-13-83 14-135 72-172 0 72-22 123-72 172Z" fill="#4e9e38"/>
+        <path d="M381 237c-63-48-81-103-58-160 39 54 59 99 58 160Z" fill="#65ad3f"/>
+        <ellipse cx="454" cy="397" rx="128" ry="164" fill="url(#pineappleFill)"/>
+        ${Array.from({ length: 7 }, (_, row) =>
+          Array.from({ length: 5 }, (_, col) => {
+            const x = 356 + col * 48 + (row % 2) * 22;
+            const y = 280 + row * 38;
+            return `<path d="M${x} ${y}q24 18 0 36q-24-18 0-36Z" fill="#dd8b16" opacity=".42"/>`;
+          }).join("")
+        ).join("")}
+        <ellipse cx="575" cy="455" rx="118" ry="78" fill="#ffe46f"/>
+        <circle cx="575" cy="455" r="38" fill="#ffd95c" opacity=".55"/>
+      </g>`,
+    refrigerator: `
+      <g filter="url(#softShadow)">
+        <rect x="328" y="140" width="244" height="390" rx="36" fill="url(#metalFill)"/>
+        <rect x="446" y="140" width="10" height="390" rx="5" fill="#55575d"/>
+        <rect x="342" y="525" width="60" height="24" rx="12" fill="#585b62"/>
+        <rect x="498" y="525" width="60" height="24" rx="12" fill="#585b62"/>
+      </g>`,
+    kettle: `
+      <g filter="url(#softShadow)">
+        <path d="M350 254h205c42 0 76 34 76 76v160H292V312c0-32 26-58 58-58Z" fill="url(#creamFill)"/>
+        <path d="M305 322l-83 31 83 70Z" fill="#aaa0ca"/>
+        <path d="M620 324c89-40 116 107 8 135" fill="none" stroke="#aaa0ca" stroke-width="46" stroke-linecap="round"/>
+        <rect x="397" y="176" width="172" height="54" rx="27" fill="#aaa0ca"/>
+        <rect x="383" y="482" width="270" height="58" rx="29" fill="#aaa0ca"/>
+        <rect x="448" y="334" width="52" height="148" rx="24" fill="#8d8fa2"/>
+      </g>`,
+    vegetables: `
+      <g filter="url(#softShadow)">
+        <circle cx="356" cy="345" r="72" fill="#78b844"/>
+        <ellipse cx="450" cy="396" rx="62" ry="112" fill="#8fc74b"/>
+        <ellipse cx="555" cy="360" rx="70" ry="96" fill="#a8d464"/>
+        <circle cx="520" cy="455" r="62" fill="#f05d44"/>
+        <ellipse cx="387" cy="480" rx="130" ry="38" fill="#6db454"/>
+        <ellipse cx="309" cy="450" rx="104" ry="44" fill="#ff9e3d"/>
+        <ellipse cx="618" cy="470" rx="82" ry="50" fill="#f2e5cd"/>
+        <circle cx="641" cy="382" r="58" fill="#d79a4a"/>
+      </g>`,
+    money: `
+      <g filter="url(#softShadow)">
+        <rect x="314" y="246" width="260" height="148" rx="18" fill="#b6acd4" transform="rotate(-7 444 320)"/>
+        <rect x="360" y="216" width="248" height="148" rx="18" fill="#efe5cd" transform="rotate(11 484 290)"/>
+        <circle cx="486" cy="293" r="38" fill="#a69acb"/>
+        <path d="M474 293h24M486 278v30" stroke="#f8efd8" stroke-width="12" stroke-linecap="round"/>
+        <rect x="600" y="280" width="124" height="72" rx="14" fill="#aaa0ca" transform="rotate(10 662 316)"/>
+        <circle cx="608" cy="440" r="36" fill="#aaa0ca"/>
+        <circle cx="653" cy="450" r="36" fill="#aaa0ca"/>
+      </g>`,
+    toilet: `
+      <g filter="url(#softShadow)">
+        <rect x="500" y="150" width="164" height="228" rx="24" fill="#f8f7ef"/>
+        <path d="M331 310h240c20 0 34 20 28 39l-32 99c-14 43-54 72-99 72H347c-45 0-82-37-82-82v-61c0-37 29-67 66-67Z" fill="#f8f7ef"/>
+        <ellipse cx="424" cy="350" rx="128" ry="47" fill="#dedbd0"/>
+        <ellipse cx="424" cy="342" rx="98" ry="27" fill="#ffffff"/>
+      </g>`,
+    document: `
+      <g filter="url(#softShadow)">
+        <rect x="340" y="196" width="242" height="320" rx="24" fill="#fff7e8" transform="rotate(-5 461 356)"/>
+        <rect x="390" y="158" width="244" height="320" rx="24" fill="#efe7d8" transform="rotate(8 512 318)"/>
+        <rect x="414" y="238" width="146" height="20" rx="10" fill="#aaa0ca"/>
+        <rect x="414" y="292" width="122" height="18" rx="9" fill="#c9bfdc"/>
+        <rect x="414" y="340" width="156" height="18" rx="9" fill="#c9bfdc"/>
+        <circle cx="510" cy="425" r="46" fill="#ef786a" opacity=".75"/>
+      </g>`,
+    transport: `
+      <g filter="url(#softShadow)">
+        <rect x="276" y="258" width="356" height="190" rx="44" fill="#f5c95b"/>
+        <rect x="326" y="286" width="86" height="58" rx="15" fill="#dbeeea"/>
+        <rect x="434" y="286" width="118" height="58" rx="15" fill="#dbeeea"/>
+        <rect x="256" y="380" width="396" height="48" rx="24" fill="#ef786a"/>
+        <circle cx="356" cy="452" r="36" fill="#57595f"/>
+        <circle cx="560" cy="452" r="36" fill="#57595f"/>
+      </g>`,
+    building: `
+      <g filter="url(#softShadow)">
+        <rect x="306" y="202" width="290" height="306" rx="30" fill="#efe7d8"/>
+        <rect x="356" y="250" width="64" height="64" rx="14" fill="#9ecfc3"/>
+        <rect x="478" y="250" width="64" height="64" rx="14" fill="#9ecfc3"/>
+        <rect x="356" y="348" width="64" height="64" rx="14" fill="#9ecfc3"/>
+        <rect x="478" y="348" width="64" height="64" rx="14" fill="#9ecfc3"/>
+        <rect x="420" y="430" width="66" height="78" rx="22" fill="#aaa0ca"/>
+        <path d="M282 205h338l-169-86Z" fill="#ef786a"/>
+      </g>`,
+    phrase: `
+      <g filter="url(#softShadow)">
+        <path d="M308 218h292c55 0 100 45 100 100v54c0 55-45 100-100 100H468l-98 72 24-72h-86c-55 0-100-45-100-100v-54c0-55 45-100 100-100Z" fill="#fff7e8"/>
+        <circle cx="392" cy="348" r="28" fill="#aaa0ca"/>
+        <circle cx="476" cy="348" r="28" fill="#aaa0ca"/>
+        <circle cx="560" cy="348" r="28" fill="#aaa0ca"/>
+      </g>`,
+    generic: `
+      <g filter="url(#softShadow)">
+        <rect x="326" y="220" width="250" height="250" rx="54" fill="url(#creamFill)" transform="rotate(-8 451 345)"/>
+        <rect x="420" y="172" width="166" height="166" rx="42" fill="#aaa0ca" opacity=".92" transform="rotate(13 503 255)"/>
+        <circle cx="544" cy="424" r="78" fill="#ef786a" opacity=".78"/>
+      </g>`,
+  };
+  return objects[kind] || objects.generic;
+}
+
 function createGeneratedImage(card) {
   const accent = card.color || palette[0];
-  const safeUkrainian = escapeHtml(card.ukrainian);
-  const safeEnglish = escapeHtml(card.english);
-  const safeCategory = escapeHtml(card.category);
+  const kind = chooseVisualKind(card);
+  const coolBackground = ["refrigerator", "transport", "building"].includes(kind);
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640">
       <defs>
-        <radialGradient id="glow" cx="28%" cy="22%" r="70%">
-          <stop offset="0%" stop-color="#fff7e8"/>
+        <radialGradient id="bg" cx="50%" cy="45%" r="78%">
+          <stop offset="0%" stop-color="${coolBackground ? "#edf8f2" : "#fff7e8"}"/>
+          <stop offset="100%" stop-color="${coolBackground ? "#d8eee6" : "#f8e5cf"}"/>
+        </radialGradient>
+        <radialGradient id="stage" cx="45%" cy="38%" r="72%">
+          <stop offset="0%" stop-color="#ffe8bc"/>
           <stop offset="100%" stop-color="${accent}"/>
         </radialGradient>
+        <linearGradient id="creamFill" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0%" stop-color="#fff5dd"/>
+          <stop offset="100%" stop-color="#d8c4a4"/>
+        </linearGradient>
+        <linearGradient id="metalFill" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0%" stop-color="#d8d9dc"/>
+          <stop offset="100%" stop-color="#8f9299"/>
+        </linearGradient>
+        <linearGradient id="pearFill" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0%" stop-color="#fff46a"/>
+          <stop offset="100%" stop-color="#aec93c"/>
+        </linearGradient>
+        <linearGradient id="pineappleFill" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0%" stop-color="#ffc84e"/>
+          <stop offset="100%" stop-color="#d47b18"/>
+        </linearGradient>
+        <radialGradient id="watermelonSkin" cx="40%" cy="30%" r="70%">
+          <stop offset="0%" stop-color="#b7d95d"/>
+          <stop offset="100%" stop-color="#517f35"/>
+        </radialGradient>
+        <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="28" stdDeviation="18" flood-color="#7d6658" flood-opacity=".22"/>
+        </filter>
       </defs>
-      <rect width="900" height="640" rx="48" fill="url(#glow)"/>
-      <circle cx="692" cy="144" r="90" fill="#ffffff" opacity=".38"/>
-      <circle cx="212" cy="470" r="135" fill="#ffffff" opacity=".28"/>
-      <text x="72" y="104" fill="#ef786a" font-family="Arial, sans-serif" font-size="30" font-weight="700" letter-spacing="6">${safeCategory}</text>
-      <text x="72" y="330" fill="#123f3b" font-family="Arial, sans-serif" font-size="86" font-weight="800">${safeUkrainian}</text>
-      <text x="76" y="410" fill="#5f746f" font-family="Arial, sans-serif" font-size="44" font-weight="700">${safeEnglish}</text>
+      <rect width="900" height="640" rx="48" fill="url(#bg)"/>
+      <circle cx="450" cy="332" r="244" fill="url(#stage)" opacity=".72"/>
+      <path d="M190 230c-38 35-36 80 7 118" fill="none" stroke="#9f88d6" stroke-width="26" stroke-linecap="round"/>
+      <path d="M705 95c23 57 68 25 77 78-54 6-29 54-81 75-23-54-68-27-78-78 54-8 29-55 82-75Z" fill="#a491db"/>
+      <circle cx="194" cy="520" r="22" fill="#a491db"/>
+      <circle cx="764" cy="384" r="20" fill="#a491db"/>
+      ${generatedObjectSvg(kind)}
     </svg>
   `;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
