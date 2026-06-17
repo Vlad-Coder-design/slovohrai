@@ -101,6 +101,12 @@ const state = {
     language: "english",
     locked: false,
   },
+  swipeQuiz: {
+    cards: [],
+    known: 0,
+    unknown: 0,
+    isAnimating: false,
+  },
   editingCardId: null,
 };
 
@@ -125,6 +131,8 @@ const welcomeSection = document.querySelector(".welcome");
 const quizPage = document.querySelector("#quiz-page");
 const quizOptions = document.querySelector("#quiz-options");
 const quizShell = document.querySelector("#quiz-shell");
+const swipeQuiz = document.querySelector("#swipe-quiz");
+const swipeStack = document.querySelector("#swipe-stack");
 const quizLaunchButton = document.querySelector("#quiz-launch-button");
 const quizForm = document.querySelector("#quiz-form");
 const quizAnswer = document.querySelector("#quiz-answer");
@@ -649,9 +657,161 @@ function openQuizMenu() {
   quizPage.hidden = false;
   quizOptions.hidden = false;
   quizShell.hidden = true;
-  document.querySelector("#quiz-progress").textContent = "РћР±РµСЂС–С‚СЊ СЂРµР¶РёРј";
+  swipeQuiz.hidden = true;
+  document.querySelector("#quiz-progress").textContent = "Оберіть режим";
   document.querySelector(".mobile-nav").hidden = true;
   scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function updateSwipeStatus() {
+  const total = state.swipeQuiz.cards.length + state.swipeQuiz.known + state.swipeQuiz.unknown;
+  const done = state.swipeQuiz.known + state.swipeQuiz.unknown;
+  document.querySelector("#swipe-left-count").textContent = `Не знаю: ${state.swipeQuiz.unknown}`;
+  document.querySelector("#swipe-right-count").textContent = `Знаю: ${state.swipeQuiz.known}`;
+  document.querySelector("#swipe-progress").textContent = `${done} / ${total}`;
+}
+
+function renderSwipeStack() {
+  updateSwipeStatus();
+  const cards = state.swipeQuiz.cards;
+
+  if (!cards.length) {
+    swipeStack.innerHTML = `
+      <div class="swipe-result">
+        <p class="section-kicker">QUIZ ЗАВЕРШЕНО</p>
+        <h3>Готово!</h3>
+        <p>Знаю: ${state.swipeQuiz.known}. Не знаю: ${state.swipeQuiz.unknown}.</p>
+        <button class="primary-button" type="button" id="swipe-finish-button">Повернутися до карток</button>
+      </div>
+    `;
+    document.querySelector("#swipe-finish-button").addEventListener("click", closeQuiz);
+    return;
+  }
+
+  swipeStack.innerHTML = cards
+    .slice(0, 4)
+    .map((card, index) => {
+      const offset = index * 10;
+      const rotation = (index - 1) * 4;
+      const image = card.image_url
+        ? `<img src="${escapeHtml(card.image_url)}" alt="${escapeHtml(card.ukrainian)}" />`
+        : `<div class="card-emoji">${card.emoji || "✦"}</div>`;
+      return `
+        <article
+          class="swipe-card"
+          data-id="${escapeHtml(card.id)}"
+          style="--stack-offset:${offset}px; --stack-rotate:${rotation}deg; --stack-scale:${1 - index * 0.04}; z-index:${20 - index};"
+        >
+          <div class="swipe-card-image">${image}</div>
+          <span>${escapeHtml(card.category)}</span>
+          <h3>${escapeHtml(card.ukrainian)}</h3>
+          <p>Свайпни вправо, якщо знаєш. Вліво, якщо ще треба повторити.</p>
+        </article>
+      `;
+    })
+    .join("");
+
+  setupSwipeCard();
+}
+
+async function markSwipeCard(card, isKnown) {
+  if (state.swipeQuiz.isAnimating) return;
+  state.swipeQuiz.isAnimating = true;
+
+  if (isKnown) {
+    state.swipeQuiz.known += 1;
+    if (!card.is_learned && !card.id.startsWith("demo-") && db && state.user) {
+      const { error } = await db.from("cards").update({ is_learned: true }).eq("id", card.id);
+      if (error) {
+        state.swipeQuiz.known -= 1;
+        state.swipeQuiz.isAnimating = false;
+        showToast("Не вдалося додати картку у вивчені");
+        return;
+      }
+      card.is_learned = true;
+    }
+  } else {
+    state.swipeQuiz.unknown += 1;
+  }
+
+  state.swipeQuiz.cards.shift();
+  state.swipeQuiz.isAnimating = false;
+  renderSwipeStack();
+  updateProgress();
+}
+
+function setupSwipeCard() {
+  const topCard = swipeStack.querySelector(".swipe-card");
+  if (!topCard) return;
+  const card = state.swipeQuiz.cards[0];
+  let startX = 0;
+  let startY = 0;
+  let currentX = 0;
+  let currentY = 0;
+  let dragging = false;
+
+  const moveCard = () => {
+    const rotate = currentX / 16;
+    topCard.style.transform = `translate(${currentX}px, ${currentY}px) rotate(${rotate}deg)`;
+    topCard.classList.toggle("swiping-known", currentX > 70);
+    topCard.classList.toggle("swiping-unknown", currentX < -70);
+  };
+
+  topCard.addEventListener("pointerdown", (event) => {
+    dragging = true;
+    startX = event.clientX;
+    startY = event.clientY;
+    topCard.setPointerCapture(event.pointerId);
+    topCard.classList.add("is-dragging");
+  });
+
+  topCard.addEventListener("pointermove", (event) => {
+    if (!dragging) return;
+    currentX = event.clientX - startX;
+    currentY = event.clientY - startY;
+    moveCard();
+  });
+
+  topCard.addEventListener("pointerup", async () => {
+    if (!dragging) return;
+    dragging = false;
+    topCard.classList.remove("is-dragging");
+
+    if (currentX > 120) {
+      topCard.classList.add("fly-right");
+      setTimeout(() => markSwipeCard(card, true), 220);
+      return;
+    }
+
+    if (currentX < -120) {
+      topCard.classList.add("fly-left");
+      setTimeout(() => markSwipeCard(card, false), 220);
+      return;
+    }
+
+    currentX = 0;
+    currentY = 0;
+    topCard.style.transform = "";
+    topCard.classList.remove("swiping-known", "swiping-unknown");
+  });
+}
+
+function openSwipeQuiz() {
+  const unlearnedCards = state.cards.filter((card) => !card.is_learned);
+  if (!unlearnedCards.length) {
+    showToast("Усі картки вже вивчені");
+    return;
+  }
+
+  state.swipeQuiz.cards = shuffleCards(unlearnedCards);
+  state.swipeQuiz.known = 0;
+  state.swipeQuiz.unknown = 0;
+  state.swipeQuiz.isAnimating = false;
+  quizOptions.hidden = true;
+  quizShell.hidden = true;
+  swipeQuiz.hidden = false;
+  document.querySelector("#quiz-progress").textContent = "Свайп Quiz";
+  renderSwipeStack();
 }
 
 function renderQuizQuestion() {
@@ -1111,11 +1271,17 @@ quizOptions.addEventListener("click", (event) => {
   if (!button) return;
 
   if (button.dataset.quizOption === "learned") {
-    startQuiz();
+    openSwipeQuiz();
     return;
   }
 
-  showToast("РЎСЋРґРё РґРѕРґР°РјРѕ С‚РІС–Р№ С‚РµРєСЃС‚ С‚СЂРѕС…Рё РїС–Р·РЅС–С€Рµ");
+  showToast("Сюди додамо твій текст трохи пізніше");
+});
+document.querySelector(".swipe-actions").addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-swipe-action]");
+  const card = state.swipeQuiz.cards[0];
+  if (!button || !card) return;
+  await markSwipeCard(card, button.dataset.swipeAction === "known");
 });
 quizForm.addEventListener("submit", checkQuizAnswer);
 document.querySelector(".quiz-language-switch").addEventListener("click", (event) => {
