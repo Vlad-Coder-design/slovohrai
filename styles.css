@@ -873,6 +873,20 @@ h2 {
   margin: 0 auto;
 }
 
+.quiz-exit-button {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 18px;
+  padding: 10px 15px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
 .swipe-status {
   display: flex;
   justify-content: space-between;
@@ -897,6 +911,28 @@ h2 {
 .swipe-card {
   position: absolute;
   inset: 0;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  transform: translateY(var(--stack-offset)) rotate(var(--stack-rotate)) scale(var(--stack-scale));
+  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+  transform-style: preserve-3d;
+}
+
+.swipe-card-inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 420ms ease;
+}
+
+.swipe-card.is-flipped .swipe-card-inner {
+  transform: rotateY(180deg);
+}
+
+.swipe-card-face {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -908,11 +944,15 @@ h2 {
     radial-gradient(circle at 82% 12%, rgb(239 120 106 / 18%), transparent 9rem),
     var(--surface-raised);
   box-shadow: 0 22px 55px rgb(24 52 47 / 16%);
-  cursor: grab;
-  user-select: none;
-  touch-action: none;
-  transform: translateY(var(--stack-offset)) rotate(var(--stack-rotate)) scale(var(--stack-scale));
-  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+  backface-visibility: hidden;
+}
+
+.swipe-card-back {
+  justify-content: center;
+  background:
+    radial-gradient(circle at 15% 12%, rgb(28 107 101 / 14%), transparent 9rem),
+    var(--surface-raised);
+  transform: rotateY(180deg);
 }
 
 .swipe-card.is-dragging {
@@ -921,11 +961,11 @@ h2 {
   box-shadow: 0 28px 70px rgb(24 52 47 / 22%);
 }
 
-.swipe-card.swiping-known {
+.swipe-card.swiping-known .swipe-card-face {
   border-color: rgb(23 96 60 / 45%);
 }
 
-.swipe-card.swiping-unknown {
+.swipe-card.swiping-unknown .swipe-card-face {
   border-color: rgb(165 62 52 / 45%);
 }
 
@@ -989,6 +1029,29 @@ h2 {
   margin: 0;
   color: var(--muted);
   line-height: 1.5;
+}
+
+.swipe-answer-list {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.swipe-answer-list p {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.swipe-answer-list small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-weight: 700;
 }
 
 .swipe-actions {
