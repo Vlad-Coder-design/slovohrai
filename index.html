@@ -1,263 +1,293 @@
-<!doctype html>
-<html lang="uk">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f7f4ed" />
-    <meta
-      name="description"
-      content="Мовні картки для вивчення англійської та іспанської разом."
-    />
-    <title>Словограй — мовні картки</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="styles.css?v=11" />
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js"></script>
-    <script src="app.js?v=14" defer></script>
-  </head>
-  <body>
-    <header class="site-header">
-      <a class="brand" href="#" aria-label="Словограй, на головну">
-        <span class="brand-mark" aria-hidden="true">
-          <span>С</span>
-          <span>¡</span>
-        </span>
-        <span>Словограй</span>
-      </a>
+## Integrate the <Stack /> component from React Bits
 
-      <nav class="desktop-nav" aria-label="Головна навігація">
-        <button class="nav-item active" data-view="all">Картки</button>
-        <button class="nav-item" data-view="favorites">Улюблені</button>
-        <button class="nav-item" data-view="learned">Вивчені</button>
-      </nav>
+You are helping integrate an open-source React component into an existing application.
 
-      <div class="header-actions">
-        <button class="add-button" id="add-card-button">
-          <span aria-hidden="true">+</span>
-          <span class="add-button-label">Додати</span>
-        </button>
-        <button class="icon-button theme-toggle" aria-label="Змінити тему">
-          <span class="sun-icon" aria-hidden="true">☀</span>
-          <span class="moon-icon" aria-hidden="true">☾</span>
-        </button>
-        <button class="auth-button" id="auth-button">
-          <span class="google-mark" aria-hidden="true">G</span>
-          <span>Увійти</span>
-        </button>
-        <button class="avatar" id="profile-button" title="Ваш профіль" hidden>М</button>
-      </div>
-    </header>
+### Component: Stack
+### Variant: JavaScript + CSS
+### Dependencies: motion
 
-    <main>
-      <section class="welcome">
-        <div class="welcome-copy">
-          <p class="eyebrow">НАВЧАЄМОСЯ РАЗОМ</p>
-          <h1>Привіт! Яке слово<br />вивчимо сьогодні?</h1>
-          <p class="welcome-text">
-            Перевертай картки, слухай вимову та збирай свою колекцію слів.
-          </p>
-        </div>
+---
 
-        <div class="progress-card">
-          <div class="progress-ring" aria-label="Вивчено 0 відсотків">
-            <span id="progress-percent">0%</span>
-          </div>
-          <div>
-            <span class="progress-label">Твій прогрес</span>
-            <strong><span id="learned-count">0</span> із <span id="total-count">0</span> слів</strong>
-            <small>Гарний початок!</small>
-          </div>
-        </div>
-      </section>
+### Usage Example
+```jsx
+import Stack from './Stack'
 
-      <section class="library" aria-labelledby="library-title">
-        <div class="library-heading">
-          <div>
-            <p class="section-kicker">ТВОЯ КОЛЕКЦІЯ</p>
-            <h2 id="library-title">Мої картки</h2>
-          </div>
-          <span class="card-count" id="visible-count">0 карток</span>
-        </div>
+const images = [
+  "https://images.unsplash.com/photo-1480074568708-e7b720bb3f09?q=80&w=500&auto=format",
+  "https://images.unsplash.com/photo-1449844908441-8829872d2607?q=80&w=500&auto=format",
+  "https://images.unsplash.com/photo-1452626212852-811d58933cae?q=80&w=500&auto=format",
+  "https://images.unsplash.com/photo-1572120360610-d971b9d7767c?q=80&w=500&auto=format"
+];
 
-        <div class="toolbar">
-          <label class="search">
-            <span aria-hidden="true">⌕</span>
-            <input
-              id="search-input"
-              type="search"
-              placeholder="Знайти слово..."
-              autocomplete="off"
+<div style={{ width: 208, height: 208 }}>
+  <Stack
+    randomRotation={true}
+    sensitivity={180}
+    sendToBackOnClick={true}
+    cards={images.map((src, i) => (
+      <img 
+        key={i} 
+        src={src} 
+        alt={`card-${i + 1}`} 
+        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+      />
+    ))}
+  />
+</div>
+```
+
+### Props
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| randomRotation | boolean | — | Applies a random rotation to each card for a 'messy' look. |
+| sensitivity | number | 200 | Drag sensitivity for sending a card to the back. |
+| sendToBackOnClick | boolean | false | When enabled, the stack also shifts to the next card on click. |
+| cards | ReactNode[] | [] | The array of card elements to display in the stack. |
+| animationConfig | object | { stiffness: 260, damping: 20 } | Configures the spring animation's stiffness and damping. |
+| autoplay | boolean | false | When enabled, the stack automatically cycles through cards. |
+| autoplayDelay | number | 3000 | Delay in milliseconds between automatic card transitions. |
+| pauseOnHover | boolean | false | When enabled, autoplay pauses when hovering over the stack. |
+
+### Full Component Source
+```jsx
+import { motion, useMotionValue, useTransform } from 'motion/react';
+import { useState, useEffect } from 'react';
+import './Stack.css';
+
+function CardRotate({ children, onSendToBack, sensitivity, disableDrag = false }) {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const rotateX = useTransform(y, [-100, 100], [60, -60]);
+  const rotateY = useTransform(x, [-100, 100], [-60, 60]);
+
+  function handleDragEnd(_, info) {
+    if (Math.abs(info.offset.x) > sensitivity || Math.abs(info.offset.y) > sensitivity) {
+      onSendToBack();
+    } else {
+      x.set(0);
+      y.set(0);
+    }
+  }
+
+  if (disableDrag) {
+    return (
+      <motion.div className="card-rotate-disabled" style={{ x: 0, y: 0 }}>
+        {children}
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      className="card-rotate"
+      style={{ x, y, rotateX, rotateY }}
+      drag
+      dragConstraints={{ top: 0, right: 0, bottom: 0, left: 0 }}
+      dragElastic={0.6}
+      whileTap={{ cursor: 'grabbing' }}
+      onDragEnd={handleDragEnd}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+export default function Stack({
+  randomRotation = false,
+  sensitivity = 200,
+  cards = [],
+  animationConfig = { stiffness: 260, damping: 20 },
+  sendToBackOnClick = false,
+  autoplay = false,
+  autoplayDelay = 3000,
+  pauseOnHover = false,
+  mobileClickOnly = false,
+  mobileBreakpoint = 768
+}) {
+  const [isMobile, setIsMobile] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < mobileBreakpoint);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, [mobileBreakpoint]);
+
+  const shouldDisableDrag = mobileClickOnly && isMobile;
+  const shouldEnableClick = sendToBackOnClick || shouldDisableDrag;
+
+  const [stack, setStack] = useState(() => {
+    if (cards.length) {
+      return cards.map((content, index) => ({ id: index + 1, content }));
+    } else {
+      return [
+        {
+          id: 1,
+          content: (
+            <img
+              src="https://images.unsplash.com/photo-1480074568708-e7b720bb3f09?q=80&w=500&auto=format"
+              alt="card-1"
+              className="card-image"
             />
-          </label>
-          <div class="filters" id="filters" aria-label="Фільтр за категорією"></div>
-          <button class="quiz-launch-button" id="quiz-launch-button">
-            <span aria-hidden="true">✦</span> Пройти Quiz
-          </button>
-        </div>
+          )
+        },
+        {
+          id: 2,
+          content: (
+            <img
+              src="https://images.unsplash.com/photo-1449844908441-8829872d2607?q=80&w=500&auto=format"
+              alt="card-2"
+              className="card-image"
+            />
+          )
+        },
+        {
+          id: 3,
+          content: (
+            <img
+              src="https://images.unsplash.com/photo-1452626212852-811d58933cae?q=80&w=500&auto=format"
+              alt="card-3"
+              className="card-image"
+            />
+          )
+        },
+        {
+          id: 4,
+          content: (
+            <img
+              src="https://images.unsplash.com/photo-1572120360610-d971b9d7767c?q=80&w=500&auto=format"
+              alt="card-4"
+              className="card-image"
+            />
+          )
+        }
+      ];
+    }
+  });
 
-        <div class="cards-grid" id="cards-grid"></div>
+  useEffect(() => {
+    if (cards.length) {
+      setStack(cards.map((content, index) => ({ id: index + 1, content })));
+    }
+  }, [cards]);
 
-        <div class="empty-state" id="empty-state" hidden>
-          <span aria-hidden="true">✦</span>
-          <h3>Тут поки порожньо</h3>
-          <p>Спробуй інший пошук або категорію.</p>
-        </div>
-      </section>
+  const sendToBack = id => {
+    setStack(prev => {
+      const newStack = [...prev];
+      const index = newStack.findIndex(card => card.id === id);
+      const [card] = newStack.splice(index, 1);
+      newStack.unshift(card);
+      return newStack;
+    });
+  };
 
-      <section class="quiz-page" id="quiz-page" hidden aria-labelledby="quiz-menu-title">
-        <div class="quiz-topbar">
-          <button class="quiz-back-button" id="quiz-back-button">← До вивчених</button>
-          <span id="quiz-progress">1 / 1</span>
-        </div>
+  useEffect(() => {
+    if (autoplay && stack.length > 1 && !isPaused) {
+      const interval = setInterval(() => {
+        const topCardId = stack[stack.length - 1].id;
+        sendToBack(topCardId);
+      }, autoplayDelay);
 
-        <div class="quiz-options" id="quiz-options">
-          <div class="quiz-heading">
-            <p class="section-kicker">QUIZ</p>
-            <h2 id="quiz-menu-title">РћР±РµСЂРё СЂРµР¶РёРј РїСЂР°РєС‚РёРєРё</h2>
-            <p>РџРѕС‚С–Рј РјРё РґРѕРґР°РјРѕ СЃСЋРґРё С‚РІС–Р№ С‚РµРєСЃС‚ С– РЅРѕРІС– СЂРµР¶РёРјРё.</p>
-          </div>
+      return () => clearInterval(interval);
+    }
+  }, [autoplay, autoplayDelay, stack, isPaused]);
 
-          <div class="quiz-pricing-grid">
-            <article class="quiz-plan-card featured">
-              <p class="quiz-plan-kicker">Р РµР¶РёРј 1</p>
-              <h3>РџСЂРѕР№С‚Рё Quiz</h3>
-              <p>РџРµСЂРµРІС–СЂРёС‚Рё РІРёРІС‡РµРЅС– СЃР»РѕРІР° Сѓ РІРёРїР°РґРєРѕРІРѕРјСѓ РїРѕСЂСЏРґРєСѓ.</p>
-              <button class="primary-button" type="button" data-quiz-option="learned">РџРѕС‡Р°С‚Рё</button>
-            </article>
+  return (
+    <div
+      className="stack-container"
+      onMouseEnter={() => pauseOnHover && setIsPaused(true)}
+      onMouseLeave={() => pauseOnHover && setIsPaused(false)}
+    >
+      {stack.map((card, index) => {
+        const randomRotate = randomRotation ? Math.random() * 10 - 5 : 0;
+        return (
+          <CardRotate
+            key={card.id}
+            onSendToBack={() => sendToBack(card.id)}
+            sensitivity={sensitivity}
+            disableDrag={shouldDisableDrag}
+          >
+            <motion.div
+              className="card"
+              onClick={() => shouldEnableClick && sendToBack(card.id)}
+              animate={{
+                rotateZ: (stack.length - index - 1) * 4 + randomRotate,
+                scale: 1 + index * 0.06 - stack.length * 0.06,
+                transformOrigin: '90% 90%'
+              }}
+              initial={false}
+              transition={{
+                type: 'spring',
+                stiffness: animationConfig.stiffness,
+                damping: animationConfig.damping
+              }}
+            >
+              {card.content}
+            </motion.div>
+          </CardRotate>
+        );
+      })}
+    </div>
+  );
+}
 
-            <article class="quiz-plan-card">
-              <p class="quiz-plan-kicker">Р РµР¶РёРј 2</p>
-              <h3>РЎРєРѕСЂРѕ</h3>
-              <p>РўСѓС‚ Р±СѓРґРµ С‚РµРєСЃС‚, СЏРєРёР№ С‚Рё РґРѕРґР°СЃРё С‚СЂРѕС…Рё РїС–Р·РЅС–С€Рµ.</p>
-              <button class="secondary-button" type="button" data-quiz-option="soon">Р”РѕРґР°РјРѕ РїС–Р·РЅС–С€Рµ</button>
-            </article>
+```
 
-            <article class="quiz-plan-card">
-              <p class="quiz-plan-kicker">Р РµР¶РёРј 3</p>
-              <h3>РЎРєРѕСЂРѕ</h3>
-              <p>Р¦Рµ РјС–СЃС†Рµ РґР»СЏ С‰Рµ РѕРґРЅРѕРіРѕ РІР°СЂС–Р°РЅС‚Р° С‚СЂРµРЅСѓРІР°РЅРЅСЏ.</p>
-              <button class="secondary-button" type="button" data-quiz-option="soon">Р”РѕРґР°РјРѕ РїС–Р·РЅС–С€Рµ</button>
-            </article>
-          </div>
-        </div>
+### Component CSS
+```css
+.stack-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  perspective: 600px;
+}
 
-        <div class="quiz-shell" id="quiz-shell" hidden>
-          <div class="quiz-heading">
-            <p class="section-kicker">ПЕРЕВІРКА ЗНАНЬ</p>
-            <h2 id="quiz-title">Як буде це слово?</h2>
-            <p id="quiz-instruction">Напиши переклад англійською.</p>
-          </div>
+.card-rotate {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
 
-          <div class="quiz-card">
-            <span class="quiz-category" id="quiz-category">Категорія</span>
-            <strong id="quiz-word">Слово</strong>
-            <div class="quiz-language-switch" aria-label="Мова відповіді">
-              <button class="active" data-quiz-language="english">🇬🇧 Англійська</button>
-              <button data-quiz-language="spanish">🇪🇸 Іспанська</button>
-            </div>
-          </div>
+.card-rotate-disabled {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
 
-          <form class="quiz-form" id="quiz-form">
-            <label class="field">
-              <span id="quiz-answer-label">Твоя відповідь англійською</span>
-              <input id="quiz-answer" autocomplete="off" required placeholder="Введи переклад..." />
-            </label>
-            <button class="primary-button" type="submit">Перевірити</button>
-          </form>
+.card {
+  border-radius: 1rem;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-          <div class="quiz-feedback" id="quiz-feedback" hidden role="status"></div>
-        </div>
-      </section>
-    </main>
+.card img {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
 
-    <nav class="mobile-nav" aria-label="Мобільна навігація">
-      <button class="mobile-nav-item active" data-view="all">
-        <span aria-hidden="true">▦</span>Картки
-      </button>
-      <button class="mobile-nav-item" data-view="favorites">
-        <span aria-hidden="true">♡</span>Улюблені
-      </button>
-      <button class="mobile-nav-item" data-view="learned">
-        <span aria-hidden="true">✓</span>Вивчені
-      </button>
-    </nav>
+.card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
 
-    <dialog class="modal" id="card-modal">
-      <form class="modal-card" id="card-form">
-        <div class="modal-heading">
-          <div>
-            <p class="section-kicker" id="card-modal-kicker">НОВА КАРТКА</p>
-            <h2 id="card-modal-title">Додати слово</h2>
-          </div>
-          <button class="modal-close" type="button" data-close-modal aria-label="Закрити">×</button>
-        </div>
+```
 
-        <label class="image-upload" id="image-upload">
-          <input id="card-image" name="image" type="file" accept="image/png,image/jpeg,image/webp" />
-          <span class="upload-icon" aria-hidden="true">↥</span>
-          <strong>Додати картинку</strong>
-          <small>Натисніть або перетягніть сюди · PNG, JPG чи WebP до 5 МБ</small>
-          <img id="image-preview" alt="Попередній перегляд" hidden />
-        </label>
-
-        <div class="form-grid">
-          <label class="field full-field">
-            <span>Назва українською</span>
-            <input name="ukrainian" required placeholder="Наприклад: Книга" />
-          </label>
-          <label class="field advanced-card-field">
-            <span>Англійською</span>
-            <input name="english" placeholder="Book" />
-          </label>
-          <label class="field advanced-card-field">
-            <span>Вимова англійською</span>
-            <input name="english_pronunciation" placeholder="[бук]" />
-          </label>
-          <label class="field advanced-card-field">
-            <span>Іспанською</span>
-            <input name="spanish" placeholder="Libro" />
-          </label>
-          <label class="field advanced-card-field">
-            <span>Вимова іспанською</span>
-            <input name="spanish_pronunciation" placeholder="[лібро]" />
-          </label>
-          <label class="field full-field">
-            <span>Категорія</span>
-            <input name="category" required placeholder="Речі, їжа, фрази..." />
-          </label>
-        </div>
-
-        <p class="form-error" id="form-error" role="alert"></p>
-        <div class="modal-actions">
-          <button class="secondary-button" type="button" data-close-modal>Скасувати</button>
-          <button class="primary-button" id="save-card-button" type="submit">Створити картку</button>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog class="modal profile-modal" id="profile-modal">
-      <div class="modal-card profile-card">
-        <button class="modal-close" type="button" data-close-profile aria-label="Закрити">×</button>
-        <img class="profile-photo" id="profile-photo" alt="" />
-        <strong id="profile-name">Користувач</strong>
-        <span id="profile-email"></span>
-        <div class="account-actions">
-          <button class="primary-button" id="switch-account-button">
-            Увійти в інший акаунт
-          </button>
-          <button class="secondary-button" id="add-account-button">
-            + Додати акаунт
-          </button>
-          <button class="text-button" id="sign-out-button">Вийти з акаунта</button>
-        </div>
-      </div>
-    </dialog>
-
-    <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  </body>
-</html>
+### Integration Instructions
+1. Install any listed dependencies.
+2. Copy the component source into the appropriate directory in the project.
+3. Import the CSS file alongside the component.
+4. Import and render the component using the usage example above as a starting point.
+5. Adjust props as needed for the specific use case — refer to the props table for all available options.
