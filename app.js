@@ -80,6 +80,11 @@ const demoCards = [
 ];
 
 const palette = ["#f1dfc4", "#e5efdb", "#d9eae8", "#eee0d4", "#eee0ec", "#f3e8bd"];
+const ADMIN_EMAILS = [
+  "dobjanskiy51@gmail.com",
+  "lyudmiladobshanska@gmail.com",
+  "petrostanislav@gmail.com",
+];
 const config = window.SUPABASE_CONFIG || {};
 const isConfigured =
   config.url &&
@@ -180,6 +185,26 @@ function showToast(message) {
   toast.classList.add("show");
   clearTimeout(showToast.timeout);
   showToast.timeout = setTimeout(() => toast.classList.remove("show"), 2200);
+}
+
+function currentUserEmail() {
+  return (state.user?.email || "").trim().toLocaleLowerCase("uk");
+}
+
+function isCurrentUserAdmin() {
+  return ADMIN_EMAILS.includes(currentUserEmail());
+}
+
+function isDemoCard(card) {
+  return card.id?.startsWith("demo-");
+}
+
+function isOwnCard(card) {
+  return Boolean(state.user?.id && card.user_id === state.user.id);
+}
+
+function canManageCard(card) {
+  return !isDemoCard(card) && (isOwnCard(card) || isCurrentUserAdmin());
 }
 
 function normalizeLookup(value) {
@@ -517,6 +542,7 @@ function renderCards() {
 
   grid.innerHTML = visibleCards
     .map((card) => {
+      const canManage = canManageCard(card);
       const visual = card.image_url
         ? `<img src="${escapeHtml(card.image_url)}" alt="${escapeHtml(card.ukrainian)}" />`
         : `<span class="card-emoji" role="img" aria-label="${escapeHtml(card.ukrainian)}">${card.emoji || "✦"}</span>`;
@@ -541,12 +567,16 @@ function renderCards() {
                 aria-label="Перевернути картку «${escapeHtml(card.ukrainian)}»"></button>
             </div>
             <div class="card-face card-back">
-              <button
-                class="delete-card-button"
-                data-action="delete"
-                aria-label="Видалити картку «${escapeHtml(card.ukrainian)}»"
-                title="Видалити картку"
-              >×</button>
+              ${
+                canManage
+                  ? `<button
+                      class="delete-card-button"
+                      data-action="delete"
+                      aria-label="Видалити картку «${escapeHtml(card.ukrainian)}»"
+                      title="Видалити картку"
+                    >×</button>`
+                  : ""
+              }
               <div class="translations">
                 <div class="translation">
                   <span class="language">🇬🇧 Англійська</span>
@@ -586,9 +616,11 @@ function renderCards() {
                     ${card.is_learned ? "✓ Вивчено" : "Позначити вивченим"}
                   </button>
                   ${
-                    card.id.startsWith("demo-")
+                    canManage
+                      ? `<button class="edit-card-button" data-action="edit">✎ Редагувати</button>`
+                      : isDemoCard(card)
                       ? `<button class="back-button" data-action="flip">↻ Назад</button>`
-                      : `<button class="edit-card-button" data-action="edit">✎ Редагувати</button>`
+                      : ""
                   }
                 </div>
               </div>
@@ -734,27 +766,23 @@ async function markSwipeCard(card, isKnown) {
 
   if (isKnown) {
     state.swipeQuiz.known += 1;
-    if (state.swipeQuiz.mode === "unlearned" && !card.is_learned && !card.id.startsWith("demo-") && db && state.user) {
-      const { error } = await db.from("cards").update({ is_learned: true }).eq("id", card.id);
-      if (error) {
+    if (state.swipeQuiz.mode === "unlearned" && !card.is_learned && !isDemoCard(card) && db && state.user) {
+      const saved = await setCardValue(card, "is_learned", true);
+      if (!saved) {
         state.swipeQuiz.known -= 1;
         state.swipeQuiz.isAnimating = false;
-        showToast("Не вдалося додати картку у вивчені");
         return;
       }
-      card.is_learned = true;
     }
   } else {
     state.swipeQuiz.unknown += 1;
-    if (state.swipeQuiz.mode === "learned" && card.is_learned && !card.id.startsWith("demo-") && db && state.user) {
-      const { error } = await db.from("cards").update({ is_learned: false }).eq("id", card.id);
-      if (error) {
+    if (state.swipeQuiz.mode === "learned" && card.is_learned && !isDemoCard(card) && db && state.user) {
+      const saved = await setCardValue(card, "is_learned", false);
+      if (!saved) {
         state.swipeQuiz.unknown -= 1;
         state.swipeQuiz.isAnimating = false;
-        showToast("Не вдалося повернути картку в невивчені");
         return;
       }
-      card.is_learned = false;
     }
   }
 
@@ -971,8 +999,33 @@ async function loadCards() {
     return;
   }
 
-  state.cards = data || [];
+  state.cards = await applyPersonalCardState(data || []);
   render();
+}
+
+async function applyPersonalCardState(cards) {
+  if (!cards.length || !db || !state.user) return cards;
+
+  const ids = cards.map((card) => card.id);
+  const { data, error } = await db
+    .from("card_user_state")
+    .select("card_id,is_favorite,is_learned")
+    .in("card_id", ids);
+
+  if (error) {
+    console.warn("Personal card state is unavailable yet", error);
+    return cards;
+  }
+
+  const personalState = new Map((data || []).map((item) => [item.card_id, item]));
+  return cards.map((card) => {
+    const saved = personalState.get(card.id);
+    return {
+      ...card,
+      is_favorite: saved?.is_favorite ?? card.is_favorite ?? false,
+      is_learned: saved?.is_learned ?? card.is_learned ?? false,
+    };
+  });
 }
 
 async function signIn(options = {}) {
@@ -1043,7 +1096,7 @@ function openCardModal() {
 }
 
 function openEditModal(card) {
-  if (!state.user || card.id.startsWith("demo-")) return;
+  if (!state.user || !canManageCard(card)) return;
 
   state.editingCardId = card.id;
   setAdvancedFieldsVisible(true);
@@ -1127,7 +1180,7 @@ async function saveCard(event) {
     uploadedPath = image.image_path;
     const card = {
       id: cardId,
-      user_id: state.user.id,
+      user_id: editingCard?.user_id || state.user.id,
       ukrainian,
       english: editingCard ? formData.get("english").trim() : autoFields.english,
       english_pronunciation: editingCard
@@ -1141,6 +1194,7 @@ async function saveCard(event) {
       image_url: image.image_url,
       image_path: image.image_path,
       color: editingCard?.color || autoFields.color,
+      is_public: editingCard ? Boolean(editingCard.is_public) : isCurrentUserAdmin(),
     };
 
     const query = editingCard
@@ -1150,7 +1204,15 @@ async function saveCard(event) {
     if (error) throw error;
 
     if (editingCard) {
-      state.cards = state.cards.map((item) => (item.id === cardId ? data : item));
+      state.cards = state.cards.map((item) =>
+        item.id === cardId
+          ? {
+              ...data,
+              is_favorite: item.is_favorite,
+              is_learned: item.is_learned,
+            }
+          : item,
+      );
       if (newImageFile && editingCard.image_path && editingCard.image_path !== image.image_path) {
         const { error: imageError } = await db.storage
           .from("card-images")
@@ -1158,7 +1220,11 @@ async function saveCard(event) {
         if (imageError) console.error(imageError);
       }
     } else {
-      state.cards.unshift(data);
+      state.cards.unshift({
+        ...data,
+        is_favorite: false,
+        is_learned: false,
+      });
     }
 
     state.editingCardId = null;
@@ -1180,25 +1246,45 @@ async function saveCard(event) {
 }
 
 async function toggleCardValue(card, field) {
-  if (!state.user || !db || card.id.startsWith("demo-")) {
+  const nextValue = !card[field];
+  await setCardValue(card, field, nextValue);
+}
+
+async function setCardValue(card, field, nextValue) {
+  if (!state.user || !db || isDemoCard(card)) {
     showToast("Увійдіть, щоб зберігати прогрес між пристроями");
-    return;
+    return false;
   }
 
-  const nextValue = !card[field];
-  const { error } = await db.from("cards").update({ [field]: nextValue }).eq("id", card.id);
+  const { error } = await db.from("card_user_state").upsert(
+    {
+      user_id: state.user.id,
+      card_id: card.id,
+      [field]: nextValue,
+    },
+    { onConflict: "user_id,card_id" },
+  );
+
   if (error) {
     showToast("Не вдалося зберегти зміну");
-    return;
+    console.error(error);
+    return false;
   }
+
   card[field] = nextValue;
   renderCards();
   updateProgress();
+  return true;
 }
 
 async function deleteCard(card) {
-  if (!state.user || !db || card.id.startsWith("demo-")) {
+  if (!state.user || !db || isDemoCard(card)) {
     showToast("Демонстраційну картку не можна видалити");
+    return;
+  }
+
+  if (!canManageCard(card)) {
+    showToast("Цю картку може видалити тільки адміністратор");
     return;
   }
 
