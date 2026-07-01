@@ -104,6 +104,7 @@ const state = {
     cards: [],
     index: 0,
     correct: 0,
+    incorrect: 0,
     language: "english",
     locked: false,
   },
@@ -694,7 +695,13 @@ function shuffleCards(cards) {
 }
 
 function normalizeAnswer(value) {
-  return value.trim().toLocaleLowerCase().replace(/\s+/g, " ");
+  return value
+    .trim()
+    .toLocaleLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[¿¡.,!?]/g, "")
+    .replace(/\s+/g, " ");
 }
 
 function updateQuizLanguage() {
@@ -921,7 +928,7 @@ function renderQuizQuestion() {
         <p class="section-kicker">QUIZ ЗАВЕРШЕНО</p>
         <h2>Гарна робота!</h2>
         <strong>${state.quiz.correct} / ${state.quiz.cards.length}</strong>
-        <p>Правильних відповідей</p>
+        <p>Правильних відповідей. Неправильні повернуто в невивчені: ${state.quiz.incorrect}.</p>
         <button class="primary-button" id="quiz-finish-button">Повернутися до карток</button>
       </div>
     `;
@@ -954,6 +961,7 @@ function startQuiz() {
   state.quiz.cards = shuffleCards(learnedCards);
   state.quiz.index = 0;
   state.quiz.correct = 0;
+  state.quiz.incorrect = 0;
   state.quiz.language = "english";
   welcomeSection.hidden = true;
   librarySection.hidden = true;
@@ -965,7 +973,7 @@ function startQuiz() {
   renderQuizQuestion();
 }
 
-function checkQuizAnswer(event) {
+async function checkQuizAnswer(event) {
   event.preventDefault();
   if (state.quiz.locked) return;
 
@@ -973,15 +981,32 @@ function checkQuizAnswer(event) {
   const expected = card[state.quiz.language];
   const isCorrect = normalizeAnswer(quizAnswer.value) === normalizeAnswer(expected);
   state.quiz.locked = true;
-  if (isCorrect) state.quiz.correct += 1;
 
   quizAnswer.disabled = true;
   quizForm.querySelector("button").disabled = true;
+
+  const shouldChangeLearnedState = card.is_learned !== isCorrect;
+  if (shouldChangeLearnedState) {
+    const saved = await setCardValue(card, "is_learned", isCorrect);
+    if (!saved) {
+      state.quiz.locked = false;
+      quizAnswer.disabled = false;
+      quizForm.querySelector("button").disabled = false;
+      return;
+    }
+  }
+
+  if (isCorrect) {
+    state.quiz.correct += 1;
+  } else {
+    state.quiz.incorrect += 1;
+  }
+
   quizFeedback.hidden = false;
   quizFeedback.classList.add(isCorrect ? "correct" : "incorrect");
   quizFeedback.textContent = isCorrect
     ? "Правильно!"
-    : `Неправильно. Правильна відповідь: ${expected}`;
+    : `Неправильно. Картку повернуто в невивчені. Правильна відповідь: ${expected}`;
 
   setTimeout(() => {
     state.quiz.index += 1;
@@ -1444,7 +1469,12 @@ quizOptions.addEventListener("click", (event) => {
     return;
   }
 
-  showToast("Сюди додамо твій текст трохи пізніше");
+  if (button.dataset.quizOption === "written-learned") {
+    startQuiz();
+    return;
+  }
+
+  showToast("Цей режим ще готується");
 });
 document.querySelector("#swipe-exit-button").addEventListener("click", closeQuiz);
 document.querySelector(".swipe-actions").addEventListener("click", async (event) => {
