@@ -15,10 +15,10 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=13" />
+    <link rel="stylesheet" href="styles.css?v=14" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=21" defer></script>
+    <script src="app.js?v=22" defer></script>
   </head>
   <body>
     <header class="site-header">
@@ -127,6 +127,23 @@
             <p>Обери, як саме хочеш повторювати слова.</p>
           </div>
 
+          <div class="quiz-timer-settings">
+            <label class="timer-toggle">
+              <input id="quiz-timer-toggle" type="checkbox" />
+              <span>Таймер</span>
+            </label>
+            <div class="timer-fields" id="quiz-timer-fields">
+              <label>
+                <span>хв</span>
+                <input id="quiz-timer-minutes" type="number" min="0" max="999" step="1" value="2" />
+              </label>
+              <label>
+                <span>сек</span>
+                <input id="quiz-timer-seconds" type="number" min="0" max="59" step="5" value="0" />
+              </label>
+            </div>
+          </div>
+
           <div class="quiz-pricing-grid">
             <article class="quiz-plan-card featured">
               <p class="quiz-plan-kicker">Quiz 1</p>
@@ -153,6 +170,7 @@
 
         <div class="swipe-quiz" id="swipe-quiz" hidden>
           <button class="quiz-exit-button" type="button" id="swipe-exit-button">← Вийти</button>
+          <div class="quiz-timer-display" id="quiz-timer-display" hidden>02:00</div>
           <div class="quiz-heading">
             <p class="section-kicker" id="swipe-kicker">НЕВИВЧЕНІ КАРТКИ</p>
             <h2 id="swipe-title">Перевір себе свайпом</h2>
@@ -174,6 +192,7 @@
         </div>
 
         <div class="quiz-shell" id="quiz-shell" hidden>
+          <div class="quiz-timer-display" id="written-quiz-timer-display" hidden>02:00</div>
           <div class="quiz-heading">
             <p class="section-kicker">ПЕРЕВІРКА ЗНАНЬ</p>
             <h2 id="quiz-title">Як буде це слово?</h2>

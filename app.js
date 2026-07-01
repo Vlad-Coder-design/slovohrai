@@ -93,6 +93,13 @@ const isConfigured =
   !config.url.includes("YOUR_") &&
   !config.publishableKey.includes("YOUR_");
 const db = isConfigured ? window.supabase.createClient(config.url, config.publishableKey) : null;
+const savedQuizTimerSettings = (() => {
+  try {
+    return JSON.parse(localStorage.getItem("slovohraiQuizTimer") || "{}");
+  } catch {
+    return {};
+  }
+})();
 
 const state = {
   cards: [...demoCards],
@@ -107,6 +114,8 @@ const state = {
     incorrect: 0,
     language: "english",
     locked: false,
+    timedOut: false,
+    finished: false,
   },
   swipeQuiz: {
     cards: [],
@@ -114,6 +123,16 @@ const state = {
     known: 0,
     unknown: 0,
     isAnimating: false,
+    timedOut: false,
+    remainingOnTimeout: 0,
+  },
+  quizTimer: {
+    enabled: Boolean(savedQuizTimerSettings.enabled),
+    minutes: Number.isFinite(Number(savedQuizTimerSettings.minutes)) ? Number(savedQuizTimerSettings.minutes) : 2,
+    seconds: Number.isFinite(Number(savedQuizTimerSettings.seconds)) ? Number(savedQuizTimerSettings.seconds) : 0,
+    remaining: 0,
+    interval: null,
+    activeType: null,
   },
   editingCardId: null,
   cardDraftVisibility: "public",
@@ -147,6 +166,12 @@ const quizLaunchButton = document.querySelector("#quiz-launch-button");
 const quizForm = document.querySelector("#quiz-form");
 const quizAnswer = document.querySelector("#quiz-answer");
 const quizFeedback = document.querySelector("#quiz-feedback");
+const quizTimerToggle = document.querySelector("#quiz-timer-toggle");
+const quizTimerMinutes = document.querySelector("#quiz-timer-minutes");
+const quizTimerSeconds = document.querySelector("#quiz-timer-seconds");
+const quizTimerFields = document.querySelector("#quiz-timer-fields");
+const swipeTimerDisplay = document.querySelector("#quiz-timer-display");
+const writtenTimerDisplay = document.querySelector("#written-quiz-timer-display");
 let cardsLoadVersion = 0;
 
 const translationFallbacks = {
@@ -716,10 +741,126 @@ function updateQuizLanguage() {
 }
 
 function closeQuiz() {
+  stopQuizTimer();
   location.reload();
 }
 
+function clampNumber(value, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return min;
+  return Math.min(Math.max(Math.floor(number), min), max);
+}
+
+function saveQuizTimerSettings() {
+  localStorage.setItem(
+    "slovohraiQuizTimer",
+    JSON.stringify({
+      enabled: state.quizTimer.enabled,
+      minutes: state.quizTimer.minutes,
+      seconds: state.quizTimer.seconds,
+    })
+  );
+}
+
+function syncQuizTimerControls() {
+  if (!quizTimerToggle || !quizTimerMinutes || !quizTimerSeconds || !quizTimerFields) return;
+  state.quizTimer.minutes = clampNumber(state.quizTimer.minutes, 0, 999);
+  state.quizTimer.seconds = clampNumber(state.quizTimer.seconds, 0, 59);
+  quizTimerToggle.checked = state.quizTimer.enabled;
+  quizTimerMinutes.value = state.quizTimer.minutes;
+  quizTimerSeconds.value = state.quizTimer.seconds;
+  quizTimerFields.classList.toggle("is-disabled", !state.quizTimer.enabled);
+  quizTimerMinutes.disabled = !state.quizTimer.enabled;
+  quizTimerSeconds.disabled = !state.quizTimer.enabled;
+}
+
+function readQuizTimerSeconds() {
+  state.quizTimer.enabled = Boolean(quizTimerToggle?.checked);
+  state.quizTimer.minutes = clampNumber(quizTimerMinutes?.value, 0, 999);
+  state.quizTimer.seconds = clampNumber(quizTimerSeconds?.value, 0, 59);
+  syncQuizTimerControls();
+  saveQuizTimerSettings();
+  return state.quizTimer.minutes * 60 + state.quizTimer.seconds;
+}
+
+function formatQuizTime(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function updateQuizTimerDisplay() {
+  [swipeTimerDisplay, writtenTimerDisplay].forEach((display) => {
+    if (!display) return;
+    display.hidden = true;
+    display.classList.remove("is-low");
+  });
+
+  const display = state.quizTimer.activeType === "written" ? writtenTimerDisplay : swipeTimerDisplay;
+  if (!display || !state.quizTimer.activeType) return;
+  display.hidden = false;
+  display.textContent = formatQuizTime(state.quizTimer.remaining);
+  display.classList.toggle("is-low", state.quizTimer.remaining <= 10);
+}
+
+function stopQuizTimer({ hide = true } = {}) {
+  if (state.quizTimer.interval) {
+    clearInterval(state.quizTimer.interval);
+  }
+  state.quizTimer.interval = null;
+  state.quizTimer.activeType = null;
+  if (hide) {
+    [swipeTimerDisplay, writtenTimerDisplay].forEach((display) => {
+      if (display) display.hidden = true;
+    });
+  }
+}
+
+function startQuizTimer(activeType, onExpire) {
+  stopQuizTimer();
+  const totalSeconds = readQuizTimerSeconds();
+  if (!state.quizTimer.enabled) return true;
+  if (totalSeconds < 1) {
+    showToast("Вкажи час для таймера");
+    return false;
+  }
+
+  state.quizTimer.remaining = totalSeconds;
+  state.quizTimer.activeType = activeType;
+  updateQuizTimerDisplay();
+  state.quizTimer.interval = setInterval(() => {
+    state.quizTimer.remaining -= 1;
+    updateQuizTimerDisplay();
+    if (state.quizTimer.remaining <= 0) {
+      stopQuizTimer({ hide: false });
+      onExpire();
+    }
+  }, 1000);
+  return true;
+}
+
+function finishSwipeQuizByTimer() {
+  if (swipeQuiz.hidden) return;
+  state.swipeQuiz.timedOut = true;
+  state.swipeQuiz.remainingOnTimeout = state.swipeQuiz.cards.length;
+  state.swipeQuiz.cards = [];
+  state.swipeQuiz.isAnimating = false;
+  showToast("Час вийшов");
+  renderSwipeStack();
+}
+
+function finishWrittenQuizByTimer() {
+  if (quizShell.hidden) return;
+  state.quiz.timedOut = true;
+  state.quiz.finished = true;
+  state.quiz.index = state.quiz.cards.length;
+  showToast("Час вийшов");
+  renderQuizQuestion();
+}
+
 function openQuizMenu() {
+  stopQuizTimer();
+  syncQuizTimerControls();
   welcomeSection.hidden = true;
   librarySection.hidden = true;
   quizPage.hidden = false;
@@ -744,6 +885,8 @@ function renderSwipeStack() {
   const cards = state.swipeQuiz.cards;
 
   if (!cards.length) {
+    stopQuizTimer({ hide: false });
+    if (swipeTimerDisplay) swipeTimerDisplay.hidden = true;
     swipeStack.innerHTML = `
       <div class="swipe-result">
         <p class="section-kicker">QUIZ ЗАВЕРШЕНО</p>
@@ -796,7 +939,7 @@ function renderSwipeStack() {
 }
 
 async function markSwipeCard(card, isKnown) {
-  if (state.swipeQuiz.isAnimating) return;
+  if (state.swipeQuiz.isAnimating || state.swipeQuiz.timedOut) return;
   state.swipeQuiz.isAnimating = true;
 
   if (isKnown) {
@@ -908,6 +1051,9 @@ function openSwipeQuiz(mode = "unlearned") {
   state.swipeQuiz.known = 0;
   state.swipeQuiz.unknown = 0;
   state.swipeQuiz.isAnimating = false;
+  state.swipeQuiz.timedOut = false;
+  state.swipeQuiz.remainingOnTimeout = 0;
+  if (!startQuizTimer("swipe", finishSwipeQuizByTimer)) return;
   quizOptions.hidden = true;
   quizShell.hidden = true;
   swipeQuiz.hidden = false;
@@ -923,6 +1069,9 @@ function openSwipeQuiz(mode = "unlearned") {
 function renderQuizQuestion() {
   const card = state.quiz.cards[state.quiz.index];
   if (!card) {
+    stopQuizTimer({ hide: false });
+    if (writtenTimerDisplay) writtenTimerDisplay.hidden = true;
+    state.quiz.finished = true;
     document.querySelector("#quiz-shell").innerHTML = `
       <div class="quiz-result">
         <p class="section-kicker">QUIZ ЗАВЕРШЕНО</p>
@@ -963,6 +1112,9 @@ function startQuiz() {
   state.quiz.correct = 0;
   state.quiz.incorrect = 0;
   state.quiz.language = "english";
+  state.quiz.timedOut = false;
+  state.quiz.finished = false;
+  if (!startQuizTimer("written", finishWrittenQuizByTimer)) return;
   welcomeSection.hidden = true;
   librarySection.hidden = true;
   quizPage.hidden = false;
@@ -975,7 +1127,7 @@ function startQuiz() {
 
 async function checkQuizAnswer(event) {
   event.preventDefault();
-  if (state.quiz.locked) return;
+  if (state.quiz.locked || state.quiz.finished) return;
 
   const card = state.quiz.cards[state.quiz.index];
   const expected = card[state.quiz.language];
@@ -1009,6 +1161,7 @@ async function checkQuizAnswer(event) {
     : `Неправильно. Картку повернуто в невивчені. Правильна відповідь: ${expected}`;
 
   setTimeout(() => {
+    if (state.quiz.finished) return;
     state.quiz.index += 1;
     renderQuizQuestion();
   }, 1100);
@@ -1455,6 +1608,19 @@ document.querySelectorAll("[data-view]").forEach((button) => {
 
 quizLaunchButton.addEventListener("click", openQuizMenu);
 document.querySelector("#quiz-back-button").addEventListener("click", closeQuiz);
+quizTimerToggle?.addEventListener("change", () => {
+  state.quizTimer.enabled = quizTimerToggle.checked;
+  syncQuizTimerControls();
+  saveQuizTimerSettings();
+});
+[quizTimerMinutes, quizTimerSeconds].forEach((input) => {
+  input?.addEventListener("input", () => {
+    state.quizTimer.minutes = Number(quizTimerMinutes?.value) || 0;
+    state.quizTimer.seconds = Number(quizTimerSeconds?.value) || 0;
+    saveQuizTimerSettings();
+  });
+});
+syncQuizTimerControls();
 quizOptions.addEventListener("click", (event) => {
   const button = event.target.closest("[data-quiz-option]");
   if (!button) return;
@@ -1486,7 +1652,7 @@ document.querySelector(".swipe-actions").addEventListener("click", async (event)
 quizForm.addEventListener("submit", checkQuizAnswer);
 document.querySelector(".quiz-language-switch").addEventListener("click", (event) => {
   const button = event.target.closest("[data-quiz-language]");
-  if (!button || state.quiz.locked) return;
+  if (!button || state.quiz.locked || state.quiz.finished) return;
   state.quiz.language = button.dataset.quizLanguage;
   updateQuizLanguage();
   quizAnswer.focus();
