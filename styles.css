@@ -1696,7 +1696,7 @@ h2 {
     bottom: 12px;
     left: 12px;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     padding: 7px;
     border: 1px solid var(--line);
     border-radius: 18px;
@@ -1717,10 +1717,16 @@ h2 {
     font-size: 10px;
     font-weight: 800;
     flex-direction: column;
+    text-decoration: none;
+    cursor: pointer;
   }
 
   .mobile-nav-item span {
     font-size: 19px;
+  }
+
+  .mobile-tip-link {
+    color: var(--coral-dark);
   }
 
   .mobile-nav-item.active {
